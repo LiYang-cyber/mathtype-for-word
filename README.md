@@ -1,229 +1,99 @@
-# MathType for Word and PowerPoint
+# MathType for Word（中文整合版）
 
-[![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Djia-ming-zhou-felimet%252Fmathtype-for-word%26metric%3Drelease)](https://hol.org/registry/plugins/jia-ming-zhou-felimet%2Fmathtype-for-word?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=jia-ming-zhou-felimet%2Fmathtype-for-word&ref=plugin-author-a1ebb28d)
+把 TeX 公式写成真正的 **MathType 7 Equation.DSMT4** 对象，在 Word DOCX / PowerPoint PPTX 里排版、编号、交叉引用，并就地编辑文档里已有的公式。全程走桌面版 Word/PowerPoint 的 COM 自动化，不生成 Word 自带 OMath、公式图片，也不用题注文字冒充公式。
 
-[繁體中文](README-zhTW.md)
+本仓库是 [felimet/mathtype-for-word](https://github.com/felimet/mathtype-for-word) 的分支，保留上游 MIT 许可与署名。上游面向 Codex / Claude 插件市场，内置批量渲染、纯文本公式扫描打标、PowerShell 7 自动安装和测试套件；本分支面向「单技能目录 + 中文文档 + 就地编辑已有公式」的场景。
 
-An installable AI Agent skill, Codex/Claude plugin, and MCP server for creating editable MathType 7 equations in Microsoft Word and PowerPoint. Word documents also support MathType-native equation numbering and dynamic cross-references.
+## 与上游的关系
 
-## Silent AI-agent operation
+- 基线：上游 `441daf4`（2026-07-22，1.3.x 时代代码）。
+- 上游在 2026-10-13 发布的 1.4.0 重写了桥脚本（55 KB → 105 KB），新增 `scan` / `mark`、批量渲染与断点续跑、桥锁、孤儿 Word 清理、PowerShell 7 自动安装，以及插件市场打包、`tests/`、`evals/`、CI。
+- 本分支没有合入上述能力，改为在旧桥脚本上增加就地编辑与中文学术排版支持。
 
-When an AI agent edits Word, PowerPoint, or MathType content, it must operate silently in the background: do not show or activate application windows, steal keyboard focus, display modal dialogs, or automate visible UI with mouse or keyboard input. If a requested step cannot be completed silently, stop and report the limitation instead of taking over the user's desktop.
+## 本分支新增
 
-## Features
-
-- Creates genuine, editable `Equation.DSMT4` objects instead of Word OMath, images, or typed Unicode equations.
-- Supports inline and centered display equations in DOCX.
-- Classifies raw manuscript expressions as inline, unnumbered display, numbered display, or dynamic reference after scanning the complete document; a read-only scan finds plain-text mathematics (including Word sub/superscripts), and a mark step turns reviewed spans into markers.
-- Inserts Word equation numbers such as `(1)` and dynamic MathType references.
-- Creates centered floating MathType equations in PowerPoint through a hidden Word conversion document.
-- Preserves the source Office file and validates the generated output.
-- Provides a portable cross-agent skill/plugin plus a local MCP server for Codex and Claude hosts; ChatGPT uses the same capability through a remote endpoint or Secure MCP Tunnel.
-
-## Requirements
-
-- Windows 10 or 11.
-- Microsoft Word and PowerPoint desktop with COM automation.
-- Python 3 on `PATH`. The server uses only the standard library, so there is nothing to install with pip.
-- PowerShell 7 or later as `pwsh.exe`. When it is missing, the plugin installs PowerShell 7.6 LTS for the current user and tells you; see [PowerShell 7](#powershell-7).
-- Desktop **MathType for Windows** from the [MathType download page](https://mathtype.tw/download/).
-
-This project is developed and tested with **MathType-win-zh-7.11.1.462** (`ProductVersion 7.11.1.462`). Install **MathType for Windows**, not only **MathType Add-In for Microsoft 365**. The Microsoft 365 task-pane add-in does not provide the desktop OLE, Word template, PowerPoint add-in, and COM workflow used here.
-
-MathType and Microsoft Office are proprietary products and are not distributed by this repository.
-
-## Terminal compatibility
-
-The Office bridge is a Windows PowerShell 7 script. The surrounding terminal may be PowerShell 7, Bash on Windows including Git Bash, or CMD, but the bridge process itself must run through `pwsh.exe`.
-
-| Active terminal | Required action |
+| 能力 | 说明 |
 |---|---|
-| PowerShell 7+ | Run the commands directly with `pwsh.exe`. |
-| Bash on Windows, including Git Bash | Invoke Windows `pwsh.exe`. |
-| WSL Bash | Invoke Windows `pwsh.exe`; Linux `pwsh` cannot automate Windows Office COM. |
-| CMD | Invoke `pwsh.exe` with the same arguments. |
-| Windows PowerShell 5.1 | Do not run the bridge in 5.1. Switch to Git Bash or CMD and invoke `pwsh.exe`. |
-| No `pwsh.exe` | Let the MCP server install PowerShell 7, or run `scripts/ensure-pwsh.ps1` as shown below. |
+| 就地编辑已有公式 | `inventory` 列出每行公式的序数、布局与缓存 TeX；`edit` 按 `old_tex` 校验后原地重写，复用原定界符，支持删除与正文精确替换，校验失败不发布 |
+| 公式预览 | `preview` 用 LibreOffice 把 DOCX 转成 PDF 与逐页 PNG，供目检排版 |
+| 中文学术排版 | `其中，` 段零首行缩进、内联公式 `w:position=0` 与 `w:textAlignment=center`、禁止固定行距溢出；`normalize-word-inline-math-layout.py --check` 自动检查 |
+| Texvc 实测表 | MathType 7.8 上哪些 TeX 命令变红字、黑菱形或静默丢符号，附等价替换写法 |
+| 环境探测增强 | MathType 从 PATH、注册表、安装根目录发现；Word 模板按需加载；用户目录可写性与 Vector 样式检查 |
+| 单技能安装 | 桥脚本、编辑模块、MCP server 都在 `mathtype-for-word\` 内，复制即可用，无需插件根目录或环境变量 |
 
-The following command works from PowerShell 7, Git Bash, and CMD:
+## 本分支未包含（相对上游）
 
-```console
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File scripts/mathtype-word.ps1 -Action probe
-```
+- `scan` / `mark`：从纯文本公式扫描候选并打标；
+- 批量渲染、断点续跑、后台任务状态查询；
+- 桥锁、孤儿 Word 清理、MathType 偏好 journal、行距裁剪修复；
+- PowerShell 7 自动安装（要求本机已有 `pwsh.exe`）；
+- 插件市场打包、`tests/`、`evals/`、CI。
 
-### PowerShell 7
+超过 40 个公式的长文档建议使用上游版本；本分支走单 Word 会话渲染。
 
-The MCP server is a Python program, and no PowerShell 7 is needed to start it: Claude Code's plugin launch command runs under Windows PowerShell 5.1 (`powershell.exe`), which every supported Windows has, and the Codex plugin and the hand registrations below start `python` directly. The bridge runs in PowerShell 7. When no PowerShell 7 exists, the first tool call that needs it installs PowerShell 7.6.6 (LTS) for the current user and tells you what it installed:
+## 目录
 
-- The official ZIP release of PowerShell from GitHub, accepted only when its SHA-256 matches the hash pinned in `scripts/ensure-pwsh.ps1` and `pwsh.exe` is validly signed by Microsoft.
-- Installed into `%USERPROFILE%\.mathtype-for-word\PowerShell\<version>`. No administrator rights, prompt, PATH change, or registry change; only this plugin uses it, and deleting the folder removes it. It is updated only with a new release of this plugin.
-- A download of about 106 MB that takes about 300 MB on disk. While it runs, a tool call answers that PowerShell 7 is being installed and where; the call after it finishes reports what was installed, and the next one does the work.
-
-Without MCP, run the same installer from any terminal; it prints the `pwsh.exe` path to use, and the download can take several minutes. `python scripts/mathtype_batch.py render` installs it the same way when needed:
-
-```console
-powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/ensure-pwsh.ps1
-```
-
-When the download is blocked (offline, a proxy, or a policy), install PowerShell 7 yourself, for example with the MSI installer (`winget install --id Microsoft.PowerShell --source winget --installer-type wix`, administrator rights), or see the [Microsoft PowerShell update FAQ](https://learn.microsoft.com/zh-tw/powershell/scripting/install/microsoft-update-faq?view=powershell-7.6).
-
-## Install with an AI agent
-
-If you want to use MathType for Word and PowerPoint in Claude Code, Claude Desktop, Codex, or ChatGPT Desktop, paste the following prompt. The agent will configure it for the current environment:
-
-```text
-Install or upgrade the MathType for Word and PowerPoint toolkit from https://github.com/felimet/mathtype-for-word. Detect my available terminal and use PowerShell 7, Bash on Windows including Git Bash, or CMD. Do not run the Office bridge under Windows PowerShell 5.1; if 5.1 is active, switch to Git Bash or CMD and invoke Windows pwsh.exe. From WSL Bash, invoke Windows pwsh.exe rather than Linux pwsh. If pwsh.exe is missing, run scripts/ensure-pwsh.ps1 with Windows powershell.exe, which installs PowerShell 7 for the current user, and tell me what it installed; if it fails, stop and tell me to install PowerShell 7 using https://learn.microsoft.com/zh-tw/powershell/scripting/install/microsoft-update-faq?view=powershell-7.6. Verify desktop MathType for Windows ProductVersion 7.11.1.462 plus Microsoft Word and PowerPoint desktop, for Codex and Claude Code, install or upgrade the plugin from the repository's marketplace (`codex plugin marketplace add felimet/mathtype-for-word` or `codex plugin marketplace upgrade mathtype-for-word`, then `codex plugin add mathtype-for-word@mathtype-for-word`; `claude plugin marketplace add felimet/mathtype-for-word` or `claude plugin marketplace update mathtype-for-word`, then `claude plugin install` or `claude plugin update mathtype-for-word@mathtype-for-word`) and do not also copy the skill or register the MCP server by hand; if a hand registration or a copied skill already exists, tell me and ask before removing it; for other hosts, install the portable skill and register the local stdio MCP server; run both MathType probes and the repository tests, preserve existing agent configuration, and report every changed file. Do not claim success unless the outputs contain editable Equation.DSMT4 objects and validation returns ok: true.
-```
-
-Then tell your agent which DOCX or PPTX file to edit and describe the required equations.
-
-Platform-specific skill locations and MCP configuration are documented in the [installation matrix](skills/mathtype-for-word/references/installation-matrix.md).
-
-## Add the skill and MCP to each agent
-
-Replace `<REPO_ROOT>` with the absolute local checkout path. Preserve existing MCP entries when editing configuration files.
-
-### Codex
-
-Install the plugin from this repository's marketplace. The plugin carries the skill and the MCP server, starts the server from its installed folder, sets the 1200 s tool limit and forwards the `MATHTYPE_*` settings:
-
-```console
-codex plugin marketplace add felimet/mathtype-for-word
-codex plugin add mathtype-for-word@mathtype-for-word
-```
-
-To upgrade, run `codex plugin marketplace upgrade mathtype-for-word` and then the `codex plugin add` command again. Restart Codex after installing or upgrading.
-
-To register the parts by hand instead, copy `skills/mathtype-for-word` to `%USERPROFILE%\.codex\skills\mathtype-for-word` or `%USERPROFILE%\.agents\skills\mathtype-for-word`, then register the server:
-
-```console
-codex mcp add mathtype-for-word -- python "<REPO_ROOT>\scripts\mcp_server.py"
-codex mcp get mathtype-for-word
-```
-
-Codex ends a tool call after 300 s by default, and one Word session of a render can run longer. Add the limit the plugin itself sets to the server's entry in `%USERPROFILE%\.codex\config.toml`; a manifest that needs several sessions still belongs in the background (`background: true`):
-
-```toml
-[mcp_servers.mathtype-for-word]
-tool_timeout_sec = 1200
-```
-
-Codex passes MCP servers only a fixed set of environment variables. To change `MATHTYPE_OFFICE_TIMEOUT_SECONDS` or another `MATHTYPE_*` setting, list it in `env_vars` in the same entry.
-
-Use the plugin or the hand registration, not both: a server registered with `codex mcp add` under the same name takes precedence over the plugin's server. The plugin forwards `MATHTYPE_WORD_POWERSHELL`, `MATHTYPE_OFFICE_TIMEOUT_SECONDS` (or its 1.3.0 name `MATHTYPE_WORD_TIMEOUT_SECONDS`) and `MATHTYPE_BRIDGE_LOCK_WAIT_SECONDS`.
-
-### Claude Code
-
-Install the plugin from this repository's marketplace:
-
-```console
-claude plugin marketplace add felimet/mathtype-for-word
-claude plugin install mathtype-for-word@mathtype-for-word
-```
-
-To upgrade, run `claude plugin marketplace update mathtype-for-word` and `claude plugin update mathtype-for-word@mathtype-for-word`.
-
-To register the parts by hand instead, copy `skills/mathtype-for-word` to `%USERPROFILE%\.claude\skills\mathtype-for-word`, then register the server:
-
-```console
-claude mcp add --scope user mathtype-for-word -- python "<REPO_ROOT>\scripts\mcp_server.py"
-claude mcp get mathtype-for-word
-```
-
-Use the plugin or the hand registration, not both, or Claude Code loads two servers and two skills. Restart Claude Code after installing or upgrading.
-
-### Claude Desktop
-
-Upload `dist/mathtype-for-word.skill` from **Customize > Skills**. Then merge this server into `%APPDATA%\Claude\claude_desktop_config.json` and restart Claude Desktop:
-
-```json
-{
-  "mcpServers": {
-    "mathtype-for-word": {
-      "command": "python",
-      "args": ["<REPO_ROOT>\\scripts\\mcp_server.py"]
-    }
-  }
-}
-```
-
-See Anthropic's [skill upload instructions](https://support.claude.com/en/articles/12512180-use-skills-in-claude) and [local MCP setup guide](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
-
-### ChatGPT Desktop
-
-If **Plugins** is available for the account or workspace, install or enable the packaged capability through the supported [ChatGPT plugin workflow](https://help.openai.com/en/articles/20001256). ChatGPT Desktop does not automatically discover this local repository. OpenAI's current full-MCP documentation applies to ChatGPT web; do not assume the desktop app has the same developer-mode surface unless it is visible for the account.
-
-ChatGPT cannot connect directly to the bundled local stdio MCP command. It requires a remote MCP endpoint or [Secure MCP Tunnel](https://help.openai.com/en/articles/12584461-developer-mode-and-full-mcp-connectors-in-chatgpt-beta), with Developer mode or Apps enabled as allowed by the account or workspace. Because MathType automation must execute on the interactive Windows desktop, the endpoint or tunnel must route execution to that Windows host. This repository currently ships only the local stdio server.
-
-## Equation typography
-
-Apply one notation standard throughout the document, including equations, inline math, prose, captions, and symbol definitions.
-
-| Mathematical role | Style |
+| 路径 | 作用 |
 |---|---|
-| Scalar variables and variable Greek letters | Italic |
-| Vectors | Bold lowercase |
-| Matrices and tensors | Bold uppercase |
-| Function names, operators, acronyms, and descriptive labels | Upright Roman |
-| Mathematical constants, differential symbols, and SI units | Upright Roman |
-| Numeric subscripts and superscripts | Upright; symbolic indices remain italic |
+| `mathtype-for-word/SKILL.md` | 技能契约：工作流、校验门、编号与引用策略、失败处理 |
+| `mathtype-for-word/scripts/mathtype-word.ps1` | Word / PowerPoint 的 COM 桥，动作见下 |
+| `mathtype-for-word/scripts/mathtype-word-editing.ps1` | 就地编辑模块，被桥脚本 dot-source 加载 |
+| `mathtype-for-word/scripts/mcp_server.py`、`run-mcp.ps1` | 本机 stdio MCP server |
+| `mathtype-for-word/scripts/normalize-word-inline-math-layout.py` | 内联公式排版检查与原地修正 |
+| `mathtype-for-word/references/` | 学术公式排版、编号与引用、PPT 工作流、安装矩阵、排错、manifest 结构 |
+| `scripts/install-skill.ps1` | 把技能安装到 Codex / 共享 agents / DSH 的技能根目录 |
 
-Use MathType styling or MathML `mathvariant`; do not imitate bold or italic mathematics with Unicode presentation characters. Preserve the document's selected math font family unless a journal or user specifies another one. IEEE requires variables to remain italic in both prose and equations, vectors to be bold, and functions to be upright. See the [IEEE Mathematics Style Guide](https://journals.ieeeauthorcenter.ieee.org/wp-content/uploads/sites/7/Editing-Mathematics.pdf) and [IEEE Math Typesetting Guide](https://journals.ieeeauthorcenter.ieee.org/wp-content/uploads/sites/7/IEEE-Math-Typesetting-Guide-for-LaTeX-Users.pdf).
+桥脚本的动作：`probe`、`probe-pptx`、`configure-defaults`、`install-template`、`inventory`、`render`、`validate`、`edit`、`update`、`preview`、`render-pptx`、`validate-pptx`、`cleanup`。
 
-Detailed bilingual prose and typography rules are in the [academic equation style reference](skills/mathtype-for-word/references/academic-equation-style.md).
+## 前置条件
 
-## Supported outputs
+- Windows 10 或 11，Microsoft **Word / PowerPoint 桌面版**。Microsoft 365 的网页式 MathType Add-in 不行，本工具依赖桌面 OLE 与 Word 模板。
+- **MathType for Windows**（上游以 7.11.1.462 开发验证，本分支另在 7.8.2.441 上实测）。只装 Add-in 不够。
+- PowerShell 7（`pwsh`）；MCP server 另需 PATH 上有 Python 3。
+- 可选：LibreOffice，用于 `preview` 生成 PDF/PNG。
 
-| Format | MathType result | Numbering and references |
-|---|---|---|
-| Word `.docx` | Inline or centered display `Equation.DSMT4` OLE | MathType-native numbers and dynamic references |
-| PowerPoint `.pptx` | Centered floating `Equation.DSMT4` OLE created directly in PowerPoint | Word-style MathType numbering and references are not available in PowerPoint and are not imitated |
+动手前先跑 `probe`：只读，报告 MathType、Word 模板、用户目录可写性、Vector 样式等检查项；失败就停，不要硬跑。
 
-PowerPoint rendering keeps Word, PowerPoint, and MathType hidden and does not use mouse, keyboard, focus, `AppActivate`, or `SendKeys`. It briefly uses the Windows clipboard to transfer the converted OLE object, which replaces whatever the user had copied.
+## 安装
 
-## Verify the installation
+1. **作为技能安装（推荐）**
 
-```console
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File scripts/mathtype-word.ps1 -Action probe
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File scripts/mathtype-word.ps1 -Action probe-pptx
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File tests/run-tests.ps1 -IncludeLiveOffice
-```
+   ```powershell
+   pwsh -File scripts\install-skill.ps1 -DefaultRoots
+   ```
 
-### Quick AI-agent test prompt
+   默认写入 `%USERPROFILE%\.codex\skills\`、`%USERPROFILE%\.agents\skills\`、`%USERPROFILE%\.dsh\skills\`；也可用 `-SkillRoot` 指定任意技能根目录，用 `-Force` 覆盖已有安装。目标目录里的技能名固定为 `mathtype-for-word`。
 
-Paste this prompt into an AI agent after installing the toolkit:
+   手工安装等价于把 `mathtype-for-word\` 整个目录复制到技能根目录，文件夹名保持不变。
 
-```text
-Use the installed MathType for Word and PowerPoint toolkit for a smoke test. Run both prerequisite probes, then use evals/fixtures/en-paper-draft.docx with en-word-manifest.json and evals/fixtures/en-presentation-draft.pptx with en-powerpoint-manifest.json to create new temporary DOCX and PPTX outputs. Keep Word, PowerPoint, and MathType silent and hidden throughout; do not overwrite the source fixtures. Validate both outputs and report their paths, MathType object counts, Word native number/reference counts, and the PowerPoint mathml_verified count. Do not claim success unless both validations return ok: true.
-```
+2. **注册 MCP server**
 
-The bridge preserves source files, validates each temporary Office file before atomic publication, and refuses to replace an existing output unless `-Overwrite` is explicit. It removes the current run's tokenized temporary sibling on handled exits and sweeps only matching siblings older than 24 hours; MCP timeouts request cleanup with the same per-run token.
+   ```powershell
+   codex mcp add mathtype-for-word -- pwsh.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "<REPO_ROOT>\mathtype-for-word\scripts\run-mcp.ps1"
+   ```
 
-Large Word documents render in resumable batches of fresh Word sessions (`batch_size`, default 40), optionally in the background with `get_mathtype_render_status` for progress; the output is published only after strict validation of the whole manifest. One render job runs at a time. A timeout terminates only Office processes the bridge logged as its own, and PowerPoint work never closes a PowerPoint instance the user already had open.
+   完整矩阵见 [`mathtype-for-word/references/installation-matrix.md`](mathtype-for-word/references/installation-matrix.md)。
 
-## Repository layout
+3. **直接跑桥脚本**
 
-| Path | Purpose |
-|---|---|
-| `skills/mathtype-for-word/` | Cross-agent skill, references, and launcher |
-| `scripts/` | Office automation bridge, MCP server, and packager |
-| `config/defaults.json` | Default Word equation-number profile |
-| `evals/fixtures/` | Real Chinese and English DOCX/PPTX evaluation inputs |
-| `tests/` | Static, MCP, live Office, rendering, and packaging checks |
-| `CHANGELOG.md` | Changes in each release |
+   ```powershell
+   pwsh -File mathtype-for-word\scripts\mathtype-word.ps1 -Action probe
+   ```
 
-## Packaging
+   `render` / `validate` / `edit` 需要 `-InputPath`、`-OutputPath`、`-ManifestPath` 等参数，完整契约见 `SKILL.md` 与 `references/workflow-and-schema.md`。
 
-```console
-python scripts/package_plugin.py
-```
+## 边界与常见坑
 
-The command creates `dist/mathtype-for-word-plugin.zip` and its SHA-256 file. The standalone skill package is `dist/mathtype-for-word.skill`.
+- 原始输入只读，输出另给路径；原地编辑需要显式授权 `-Overwrite`。
+- 一律生成可编辑 MathType 对象，不用 OMath、公式图片或普通文字替代。
+- 受限沙箱里 Word COM 会报 `Word could not fire event`（`0x800A1772`），原因是写不了 `%APPDATA%\Microsoft\Word`；需要在全盘权限下运行。
+- 复杂分式、矩阵、对齐组、重音、嵌套上下标必须渲染成 PDF/PNG 逐页看，结构校验证明不了排版正确。
+- 编号与交叉引用由 Word 原生域承担，移动或增删公式后要跑 `update` 更新域。
+- 插入右侧编号时，桥脚本用临时书签区分 MathType 新增的空段落与用户原有空行，只清理前者。
+- 右编号公式后的段落以「其中，」开头时，自动取消首行缩进，并让前导正文、公式和说明同页衔接。
 
-## Support
+## 版本与许可
 
-If you encounter any problems, please open a [GitHub Issue](https://github.com/felimet/mathtype-for-word/issues) to report them and discuss solutions.
-
-## License
-
-[MIT](LICENSE)
+- 本分支版本 **2.0.0**（2026-11-06），基于上游 `441daf4`，MIT 许可。
+- 上游项目：<https://github.com/felimet/mathtype-for-word>
+- 版权：上游 `LICENSE` 保留 Jia-Ming Zhou（Felimet）署名；本分支的修改同样以 MIT 发布。
