@@ -13,3 +13,10 @@ for this fork, not part of the skill.
 
 The two documentation changes are already prepared as branches on top of upstream `940fc37`:
 `docs/mathtype-texvc-subset` and `feat/inline-math-layout-check`.
+
+Published upstream:
+
+- Issue #10 — in-place editing of existing equations: <https://github.com/felimet/mathtype-for-word/issues/10>
+- PR #8 — Texvc subset and Chinese inline typography: <https://github.com/felimet/mathtype-for-word/pull/8>
+- PR #9 — inline-math layout checker: <https://github.com/felimet/mathtype-for-word/pull/9>
+
