@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: Jia-Ming Zhou (Felimet)
   fork_maintainer: LiYang
-  version: 2.1.0
+  version: 2.1.1
   upstream: https://github.com/felimet/mathtype-for-word
   upstream_base: "1.4.3"
 ---
@@ -95,7 +95,7 @@ exactly as they were.
 4. Create a schema v1 JSON manifest. Read [workflow-and-schema.md](references/workflow-and-schema.md) for the exact contract and examples.
 5. For academic prose and mathematical typography, apply [academic-equation-style.md](references/academic-equation-style.md). A display equation must be introduced in the preceding prose and followed by “其中，” plus definitions of every symbol, index, superscript, subscript, unit, and physical meaning that is not already unambiguous. A paragraph beginning with “其中，” immediately after a numbered display is a continuation of the lead-in and equation: force `w:ind/@w:firstLine="0"` and clear `w:firstLineChars`, then keep all three together on the same page. For every paragraph containing inline equations, set object runs to Normal character position, set `w:textAlignment` to `center`, and change exact/fixed spacing to At Least while retaining the established body line height. Audit the whole document so variables, vectors, matrices, functions, constants, indices, and units retain one consistent style.
 6. Call `render_mathtype_word_document`. Do not edit the same DOCX concurrently in Word. Manifests whose equations plus references exceed `batch_size` (default 40) render in fresh Word sessions with checkpoints; a foreground render runs all of them in one tool call, so for such manifests pass `background: true` and poll `get_mathtype_render_status` while its status is `queued` or `running`. On `interrupted`, call render again with the same paths to resume from the last checkpoint.
-7. Read the render result's `validation` (for a background job, `result.validation` from `get_mathtype_render_status` once it is `completed`). The bridge validates the saved file against the whole manifest before it publishes, so a render with `ok: true` needs no second validate call. Validation reads every saved equation and rejects one whose TeX MathType did not translate (red literal text) or whose symbol it could not map (a diamond), naming the equation and its TeX. For a DOCX that contains inline equations, also run `python scripts/normalize-word-inline-math-layout.py <output.docx> --check` and require `ok: true` before delivery.
+7. Read the render result's `validation` (for a background job, `result.validation` from `get_mathtype_render_status` once it is `completed`). The bridge validates the saved file against the whole manifest before it publishes, so a render with `ok: true` needs no second validate call. Validation reads every saved equation and rejects one whose TeX MathType did not translate (red literal text) or whose symbol it could not map (a diamond), naming the equation and its TeX. For a Chinese document, also run `python scripts/normalize-word-inline-math-layout.py <output.docx> --check` and require `ok: true`; it reports `其中，` paragraphs whose effective first-line indent is not zero. Add `--strict` only when auditing the fork's inline layout standard (centered text alignment, Normal character position, At Least line spacing); MathType's own output uses negative `w:position` values on purpose, so strict mode reports normal output as non-conforming.
 8. For complex fractions, matrices, aligned systems, accents, or nested scripts, open/render the result and visually inspect it. Structural checks cannot prove typographic correctness.
 9. Report the output path, counts, native number/reference mechanism, validation result, and any limitations.
 
@@ -260,9 +260,9 @@ Treat any of these as a failed deliverable:
 - A Chinese `其中，` explanation inherits a two-character first-line indent, or has nonzero
   `w:firstLine` or `w:firstLineChars`.
 - An inline-math paragraph lacks centered Chinese text alignment, or any inline equation run has a
-  nonzero or missing Normal character-position setting.
+  nonzero or missing Normal character-position setting. The checker's `--strict` mode audits these.
 - A paragraph containing an inline equation still uses exact/fixed line spacing, or its At Least
-  minimum is below the intended body line height.
+  minimum is below the intended body line height. The checker's `--strict` mode audits exact spacing.
 - A `validate` warning that MathType could not convert a command: the saved object still holds the untranslated TeX, so that equation renders as literal red text or drops a symbol. Validation now fails the render for a manifest equation in this state and names the command. Inspect the rendered pages as well, and never ship the document as-is.
 
 ## Failure handling
@@ -283,7 +283,7 @@ Treat any of these as a failed deliverable:
 - Manifest design and end-to-end examples: [workflow-and-schema.md](references/workflow-and-schema.md)
 - Native field anatomy and Format Equation Numbers behavior: [numbering-and-references.md](references/numbering-and-references.md)
 - Academic placement, consistent symbol typography, definitions, units, and TeX/MathML guidance: [academic-equation-style.md](references/academic-equation-style.md)
-- Chinese inline-math paragraph and character-position audit: `scripts/normalize-word-inline-math-layout.py --check`
+- Chinese `其中，` first-line indent audit: `scripts/normalize-word-inline-math-layout.py --check`; add `--strict` for the fork's inline layout standard
 - Terminal selection plus Claude Code, Claude Desktop, Codex, and ChatGPT Desktop setup: [installation-matrix.md](references/installation-matrix.md)
 - Errors, recovery, and fallback boundary: [troubleshooting.md](references/troubleshooting.md)
 - MathType ribbon capability matrix and guarded interactive commands: [advanced-ribbon-operations.md](references/advanced-ribbon-operations.md)

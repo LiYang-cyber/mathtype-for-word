@@ -16,7 +16,7 @@ from typing import Any, BinaryIO
 
 
 SERVER_NAME = "mathtype-for-word"
-SERVER_VERSION = "2.1.0"
+SERVER_VERSION = "2.1.1"
 # Absolute: main() leaves the folder the server was started in.
 SCRIPT_PATH = Path(__file__).resolve().with_name("mathtype-word.ps1")
 # initialize-era MCP revisions this server implements, newest first. 2026-07-28 is absent on purpose.

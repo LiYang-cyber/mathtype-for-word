@@ -16,7 +16,7 @@
 |---|---|
 | 就地编辑已有公式 | `inventory` 列出每行公式的序数、布局与缓存 TeX；`edit` 按 `old_tex` 校验后原地重写，复用原定界符，支持删除与正文精确替换，校验失败不发布 |
 | 公式预览 | `preview` 用 LibreOffice 把 DOCX 转成 PDF 与逐页 PNG，供目检排版 |
-| 中文学术排版 | `其中，` 段零首行缩进、内联公式 `w:position=0` 与 `w:textAlignment=center`、禁止固定行距溢出；`normalize-word-inline-math-layout.py --check` 自动检查 |
+| 中文学术排版 | `其中，` 段零首行缩进（解析 `basedOn`/默认样式继承，`--check` 默认只查这一项）；`--strict` 审计内联公式居中、Normal 字符位置与 At Least 行距；`normalize-word-inline-math-layout.py` 可原地修正并校验 OLE 字节不变 |
 | Texvc 预检 | 7.8 实测命令清单在 render 前拦截已知会变红字/丢符号的命令 |
 | 环境探测增强 | MathType 从 PATH、注册表、安装根目录发现；Word 模板按需加载；用户目录可写性、Vector 样式、模板加载方式检查 |
 | 模板安装 | `install-template` 把 MathType Commands 复制到 Word STARTUP，使模板常驻 |
@@ -103,6 +103,6 @@
 
 ## 版本与许可
 
-- 本分支版本 **2.1.0**（2026-11-09），同步上游 v1.4.3，MIT 许可。
+- 本分支版本 **2.1.1**（2026-11-09），同步上游 v1.4.3，MIT 许可。
 - 上游项目：<https://github.com/felimet/mathtype-for-word>
 - 版权：上游 `LICENSE` 保留 Jia-Ming Zhou（Felimet）署名；本分支的修改同样以 MIT 发布。
