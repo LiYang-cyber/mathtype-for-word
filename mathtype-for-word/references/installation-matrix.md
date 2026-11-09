@@ -7,7 +7,7 @@
 - Desktop **MathType for Windows** with its Word template and PowerPoint add-in enabled. This repo is verified against **MathType-win-zh-7.11.1.462** (`ProductVersion 7.11.1.462`) and MathType 7.8.2.441. Download it from <https://mathtype.tw/download/>.
 - Do not substitute **MathType Add-In for Microsoft 365**. The task-pane add-in lacks the desktop OLE/COM integration required here.
 - Python 3 available as `python.exe` or `python` on `PATH`.
-- PowerShell 7 or later, available as Windows `pwsh.exe`. Windows PowerShell 5.1 is not supported because MathType COM macro calls can block under that host.
+- PowerShell 7 or later, available as Windows `pwsh.exe`. Windows PowerShell 5.1 is not supported because MathType COM macro calls can block under that host. This fork requires `pwsh.exe` to be installed already; it does not download or install PowerShell 7. Set `MATHTYPE_WORD_POWERSHELL` to an absolute path when `pwsh.exe` is not on `PATH`.
 - LibreOffice (optional) for `preview` PDF/PNG rendering.
 
 ## Terminal selection
@@ -43,6 +43,8 @@ Set `<REPO_ROOT>` to the absolute path of the checked-out repository before usin
     references\*.md
     scripts\mathtype-word.ps1            the bridge
     scripts\mathtype-word-editing.ps1    inventory, editing, preview, discovery
+    scripts\mathtype_batch.py            batched, resumable render job runner
+    scripts\normalize-word-inline-math-layout.py  inline-math typography checker
     scripts\invoke-bridge.ps1            wrapper that resolves the bridge next to itself
     scripts\mcp_server.py                stdio MCP server
     scripts\run-mcp.ps1

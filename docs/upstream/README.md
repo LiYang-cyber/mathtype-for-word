@@ -4,6 +4,11 @@ This directory holds the drafts prepared for
 [felimet/mathtype-for-word](https://github.com/felimet/mathtype-for-word). They are working notes
 for this fork, not part of the skill.
 
+Status (2026-11-09): upstream shipped v1.4.3 on 2026-11-08. The report behind PR #8 became the
+MTEF-based translation check in upstream PR #11 (credited as "Reported in #8"), and upstream also
+fixed the existing-number-count bug found while reproducing issue #10. PR #8 and #9 stay open with
+changes requested; this fork synced the upstream features in v2.1.0.
+
 | File | Purpose |
 |---|---|
 | `01-issue-in-place-editing.md` | Issue proposing in-place editing of existing equations (the biggest gap) |

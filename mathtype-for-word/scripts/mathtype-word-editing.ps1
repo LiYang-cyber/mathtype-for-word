@@ -692,15 +692,19 @@ function Invoke-Edit {
             }
         }
         $script:Document.Fields.Update() | Out-Null
-        $validationManifest = [pscustomobject]@{
-            baseline_counts = [pscustomobject]@{
-                mathtype_objects        = ([int]$baseline['mathtype_objects'] - [int]$report['deleted'])
-                native_number_fields    = [int]$baseline['native_number_fields']
-                native_reference_fields = [int]$baseline['native_reference_fields']
-            }
-            equations  = @()
-            references = @()
+        $after = Get-DocumentBaselineCounts
+        $expectedObjects = [int]$baseline['mathtype_objects'] - [int]$report['deleted']
+        if ([int]$after['mathtype_objects'] -ne $expectedObjects) {
+            $report['problems'] += ('MathType object count after editing is ' + [int]$after['mathtype_objects'] + '; expected ' + $expectedObjects + ' (inventory minus deletions).')
         }
+        if (@($report['problems']).Count -gt 0) {
+            throw ('Edit verification failed: ' + (@($report['problems']) -join ' '))
+        }
+        # Validation expects the document's own numbers and references plus the manifest's, and an edit manifest
+        # creates none of either, so the post-edit counts become the baseline.
+        $script:BaselineNumberFields = [int]$after['native_number_fields']
+        $script:BaselineReferences = [int]$after['native_reference_fields']
+        $validationManifest = [pscustomobject]@{ equations = @(); references = @() }
         $report['validation'] = Save-DocumentAtomically -Destination $destination -Manifest $validationManifest
     }
     finally {
